@@ -158,16 +158,24 @@ public class Vents {
             });
             map = keep;
         }
-        public static int path(HashMap<String, Vent> map, LinkedList<Vent> path, int time, int steam){
-            Queue<Vent> pQueue = new LinkedList<>();
-            for(String next : map.get(path.getLast()).get)
-            if(pQueue.isEmpty() || time == 0)
-                return steam;
-            else{
 
+        public static int path(HashMap<String, Vent> map, int time, String start){
+            Queue<Vent> pQueue = new LinkedList<>();
+            Vent v = map.get(start);
+            v.isVisited();
+
+            pQueue.add(map.get(start));
+            while(!pQueue.isEmpty()){
+                v = pQueue.remove();
+                time--;
+                for(String next : v.getConnections()){
+                    pQueue.add(map.get(next));
+                }
             }
+
         }
 
+        // TODO
         public static Queue<Vent> maxFlowPath(HashMap<String, Vent> map, String start){
             Queue<Vent> path = new LinkedList<>();
             Queue<Vent> pQueue = new LinkedList<>();
