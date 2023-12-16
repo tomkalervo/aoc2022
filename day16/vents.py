@@ -131,14 +131,122 @@ def  _printPath(path, matrix, flow_rate):
     v = u
   print("Done. A total of ", total, " steam has been released")
 
+# Part 2
+def maximise_steam_eliphant_helper(flow_rate, matrix, start):
+  steam = 0
+  time = 26
+  max_steam = 0
+  for x in sorted(list(flow_rate), reverse=True):
+    time -= 1
+    max_steam += x * time
+    time -= 1
+  time = [26,26]
+  path = [[start],[start]]
+  queue = [index for index, value in enumerate(flow_rate) if value > 0]
+  return branch_and_bound_duo(flow_rate, matrix, path, queue, time, steam, max_steam)
+
+def branch_and_bound_duo(flow_rate, matrix, path, queue, time, steam, max_steam):
+  # Basecases
+  if not queue:
+    print("Queue empty at time: {} {}".format(time[0], time[1]))
+    return [steam, path]
+  if time[0] == 0 and time[1] == 0:
+    print("time: {} {}".format(time[0], time[1]))
+    return [steam, path]
+  if time[0] < 0 or time[1] < 0:
+    print("Negative time!")
+    sys.exit(1)
+  if time[0] == 0:
+    print("time: {} {}".format(time[0], time[1]))
+    [st2, pt2] = branch_and_bound_duo(flow_rate, matrix, path[1], queue, time[1], steam, max_steam)
+    return [st2, [path[0],pt2]]
+  if time[1] == 0:
+    print("time: {} {}".format(time[0], time[1]))
+    [st1, pt1] = branch_and_bound_duo(flow_rate, matrix, path[0], queue, time[0], steam, max_steam)
+    return [st1, [pt1,path[1]]]
+
+  # Time never stand still
+  time[0] -= 1
+  time[1] -= 1
+  highest_steam = 0
+  best_path = []
+  for i in range(len(queue)):
+    for j in range(len(queue)):
+      if not i == j:
+        s1 = queue[i]
+        s2 = queue[j]
+        distance1 = matrix[path[0][-1]][s1]
+        distance2 = matrix[path[1][-1]][s2]
+        qu = queue.copy()
+        qu.remove(s1)
+        qu.remove(s2)
+        if distance1 < time[0] and distance2 < time[1]:
+          # print("both")
+          distance = min(distance1, distance2)
+          missed_steam = sum(flow_rate[v]*(distance) for v in qu)
+          if max_steam-missed_steam > steam:
+            # use new, local variables
+            tm = [(time[0]-distance1),(time[1]-distance2)]
+            st = (tm[0] * flow_rate[s1]) + (tm[1] * flow_rate[s2])
+            max_st = max_steam - missed_steam
+            [st,pt] = branch_and_bound_duo(flow_rate, matrix, [[s1],[s2]], qu, tm, st, max_st)
+            if st > highest_steam:
+              highest_steam = st
+              best_path = pt
+        if distance1 < time[0] and distance2 >= time[1]:
+          # print("only 1")
+          qu.append(s2)
+          missed_steam = sum(flow_rate[v]*(distance1) for v in qu)
+          if max_steam-missed_steam > steam:
+            # use new, local variables
+            tm = (time[0]-distance1)
+            st = (tm * flow_rate[s1])
+            max_st = max_steam - missed_steam
+            [st,pt] = branch_and_bound(flow_rate, matrix, [s1], qu, tm, st, max_st)
+            if st > highest_steam:
+              highest_steam = st
+              best_path = [pt,[]]
+        if distance1 >= time[0] and distance2 < time[1]:
+          # print("only 2")
+          qu.append(s1)
+          missed_steam = sum(flow_rate[v]*(distance2) for v in qu)
+          if max_steam-missed_steam > steam:
+            # use new, local variables
+            tm = (time[1]-distance2)
+            st = (tm * flow_rate[s2])
+            max_st = max_steam - missed_steam
+            [st,pt] = branch_and_bound(flow_rate, matrix, [s2], qu, tm, st, max_st)
+            if st > highest_steam:
+              highest_steam = st
+              best_path = [[],pt]
+
+  if best_path:
+    [p1,p2] = best_path
+    path[0].extend(p1)
+    path[1].extend(p2)
+    steam += highest_steam
+    # print("new top steam: ", steam)
+    # print("path 1: ", *path[0])
+    # print("path 2: ", *path[1])
+
+  return [steam, path]
+
+
 if __name__ == "__main__":
   file_path = 'day16/input2.txt'
   adj_map = read_file_and_build_dict(file_path)
   [names,flow_rate,matrix] = get_adj_matrix(adj_map)
   start = names.index('AA')
+  print("Part 1")
   [steam, path] = maximise_steam(flow_rate,matrix,start)
   print("Steam: ", steam)
   print(*path)
   _printPath(path, matrix, flow_rate)
 
+  print("Part 2")
+  [steam, path] = maximise_steam_eliphant_helper(flow_rate,matrix,start)
+  print("Steam: ", steam)
+  print("path 1: ", *path[0])
+  print("path 2: ", *path[1])
 
+  # 2365 to low
